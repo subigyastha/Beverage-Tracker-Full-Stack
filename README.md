@@ -61,59 +61,68 @@ Create and activate a virtual environment to isolate dependencies:
   cd beverage_tracker
   python3 -m venv venv
   source venv/bin/activate
-
+```
 - **Windows**:
-cmd
+
+```cmd
 cd beverage_tracker
 python -m venv venv
 venv\Scripts\activate
-
+```
 
 ### 3. Install Dependencies
 Install required Python packages:
-
+```
 pip install -r requirements.txt
+```
 
 ### 4. Configure the Database
 The default setup uses SQLite. To use it:
 
 Ensure settings.py has:
-
+```
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-Apply migrations:
 
-`python manage.py makemigrations
+```
+Apply migrations:
+```
+python manage.py makemigrations
 python manage.py migrate`
+```
 
 ### 5. Collect Static Files
 Gather static files (e.g., dynamic_subcategories.js):
 
-
+```
 python manage.py collectstatic
+```
+
 Ensure settings.py includes:
 
-
+```
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "intake_tracker/static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
+```
 
 ### 6. Create a Superuser (Optional)
 For admin access:
 
-
+```
 python manage.py createsuperuser
+```
 Follow prompts to set username, email, and password.
 
 ### 7. Run the Development Server
 Start the app:
-
+```
 python manage.py runserver
+```
 
 Open http://127.0.0.1:8000/ in your browser.
 
