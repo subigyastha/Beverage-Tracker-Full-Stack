@@ -17,6 +17,7 @@ This project allows users to:
 - **Operating System**: Windows, macOS, or Linux
 
 ## Project Structure
+```
 beverage_tracker/
 ├── manage.py
 ├── tracker/             # Main Django app
@@ -40,7 +41,7 @@ beverage_tracker/
 ├── requirements.txt     # Python dependencies
 └── README.md            # This file
 
-
+```
 
 
 
