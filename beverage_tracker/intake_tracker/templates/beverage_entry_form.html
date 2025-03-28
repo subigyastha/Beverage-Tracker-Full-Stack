@@ -65,13 +65,6 @@
                             </div>
                         {% endfor %}
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                        {{ beverage_form.subcategory }}
-                        {% if beverage_form.subcategory.errors %}
-                            <p class="mt-1 text-sm text-red-600">{{ beverage_form.subcategory.errors }}</p>
-                        {% endif %}
-                    </div>
                 </div>
 
                 <!-- Additives -->
@@ -104,53 +97,7 @@
                     <button type="button" id="add-additive" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Add Additive</button>
                 </div>
                 
-                <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const additiveForms = document.getElementById('additive-forms');
-                    const addAdditiveBtn = document.getElementById('add-additive');
-                    const totalForms = document.querySelector('input[name="additives-TOTAL_FORMS"]');
-                
-                    // Remove additive
-                    additiveForms.addEventListener('click', function(e) {
-                        if (e.target.classList.contains('remove-additive')) {
-                            const formDiv = e.target.closest('.additive-form');
-                            const deleteInput = formDiv.querySelector('input[name$="-DELETE"]');
-                            if (deleteInput) {
-                                // Existing form: mark for deletion
-                                deleteInput.checked = true;
-                                formDiv.style.display = 'none'; // Hide visually
-                            } else {
-                                // New form: remove entirely
-                                formDiv.remove();
-                                totalForms.value = parseInt(totalForms.value) - 1;
-                            }
-                        }
-                    });
-                
-                    // Add new additive form
-                    addAdditiveBtn.addEventListener('click', function() {
-                        const formCount = parseInt(totalForms.value);
-                        const newForm = additiveForms.children[0].cloneNode(true);
-                        newForm.querySelectorAll('input, select').forEach(input => {
-                            const name = input.name.replace(/additives-\d+-/, `additives-${formCount}-`);
-                            input.name = name;
-                            input.id = `id_${name}`;
-                            if (input.type !== 'hidden') input.value = '';
-                            if (input.name.endsWith('-DELETE')) input.checked = false;
-                        });
-                        newForm.style.display = 'block';
-                        additiveForms.appendChild(newForm);
-                        totalForms.value = formCount + 1;
-                    });
-                
-                    // Show existing forms
-                    additiveForms.querySelectorAll('.additive-form').forEach(form => {
-                        if (!form.querySelector('input[name$="-DELETE"]')) {
-                            form.querySelector('.remove-additive').addEventListener('click', () => form.remove());
-                        }
-                    });
-                });
-                </script>
+            
 
                 <!-- Symptoms -->
                 <div class="border-b border-gray-200 pb-6">
@@ -247,6 +194,53 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Helper functions
+
+    //additive handling
+    document.addEventListener('DOMContentLoaded', function() {
+        const additiveForms = document.getElementById('additive-forms');
+        const addAdditiveBtn = document.getElementById('add-additive');
+        const totalForms = document.querySelector('input[name="additives-TOTAL_FORMS"]');
+    
+        // Remove additive
+        additiveForms.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-additive')) {
+                const formDiv = e.target.closest('.additive-form');
+                const deleteInput = formDiv.querySelector('input[name$="-DELETE"]');
+                if (deleteInput) {
+                    // Existing form: mark for deletion
+                    deleteInput.checked = true;
+                    formDiv.style.display = 'none'; // Hide visually
+                } else {
+                    // New form: remove entirely
+                    formDiv.remove();
+                    totalForms.value = parseInt(totalForms.value) - 1;
+                }
+            }
+        });
+    
+        // Add new additive form
+        addAdditiveBtn.addEventListener('click', function() {
+            const formCount = parseInt(totalForms.value);
+            const newForm = additiveForms.children[0].cloneNode(true);
+            newForm.querySelectorAll('input, select').forEach(input => {
+                const name = input.name.replace(/additives-\d+-/, `additives-${formCount}-`);
+                input.name = name;
+                input.id = `id_${name}`;
+                if (input.type !== 'hidden') input.value = '';
+                if (input.name.endsWith('-DELETE')) input.checked = false;
+            });
+            newForm.style.display = 'block';
+            additiveForms.appendChild(newForm);
+            totalForms.value = formCount + 1;
+        });
+    
+        // Show existing forms
+        additiveForms.querySelectorAll('.additive-form').forEach(form => {
+            if (!form.querySelector('input[name$="-DELETE"]')) {
+                form.querySelector('.remove-additive').addEventListener('click', () => form.remove());
+            }
+        });
+    });
 
     // Symptoms handling
     const symptomForms = document.getElementById('symptom-forms');
