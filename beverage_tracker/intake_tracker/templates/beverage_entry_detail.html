@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto py-8">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-semibold mb-4 text-gray-800 text-center">Beverage Entry Details</h1>
+
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Date:</strong> <span class="font-medium">{{ entry.date }}</span></p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Time:</strong> <span class="font-medium">{{ entry.time }}</span></p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Category:</strong> <span class="font-medium">{{ entry.get_category_display }}</span> {% if entry.custom_category %}<span class="text-xs text-gray-500">(Custom: {{ entry.custom_category }})</span>{% endif %}</p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Subcategory:</strong> <span class="font-medium">{{ entry.subcategory|default:'-' }}</span> {% if entry.custom_subcategory %}<span class="text-xs text-gray-500">(Custom: {{ entry.custom_subcategory }})</span>{% endif %}</p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Quantity:</strong> <span class="font-medium">{{ entry.quantity }}</span> <span class="font-medium">{{ entry.get_unit_display }}</span> {% if entry.custom_unit %}<span class="text-xs text-gray-500">(Custom: {{ entry.custom_unit }})</span>{% endif %}</p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Temperature:</strong> <span class="font-medium">{{ entry.get_temperature_display }}</span></p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Notes:</strong> <span class="font-medium">{{ entry.notes|default:'-' }}</span></p>
+        </div>
+        <div class="mb-3">
+            <p class="text-gray-700 text-sm"><strong>Has Symptoms:</strong> <span class="font-medium">{% if entry.has_symptoms %}Yes{% else %}No{% endif %}</span></p>
+        </div>
+
+        {% if additives %}
+            <div class="mb-3">
+                <p class="text-gray-700 text-sm"><strong>Additives:</strong></p>
+                <ul class="list-disc list-inside text-gray-600 text-sm">
+                    {% for additive in additives %}
+                        <li>{{ additive.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% else %}
+            <div class="mb-3">
+                <p class="text-gray-700 text-sm"><strong>Additives:</strong> <span class="font-medium">None</span></p>
+            </div>
+        {% endif %}
+
+        {% if entry.symptoms.all %}
+            <div class="mb-3">
+                <p class="text-gray-700 text-sm"><strong>Symptoms:</strong></p>
+                <ul class="list-disc list-inside text-gray-600 text-sm">
+                    {% for symptom in entry.symptoms.all %}
+                        <li>{{ symptom.get_symptoms_display }} - {{ symptom.get_severity_display }} - {{ symptom.get_timing_display }} {% if symptom.custom_symptoms %}<span class="text-xs text-gray-500">(Custom: {{ symptom.custom_symptoms }})</span>{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% else %}
+            <div class="mb-3">
+                <p class="text-gray-700 text-sm"><strong>Symptoms:</strong> <span class="font-medium">None</span></p>
+            </div>
+        {% endif %}
+
+        <div class="flex justify-center space-x-4 mt-6">
+            <a href="{% url 'beverage_entry_list' %}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Back to List
+            </a>
+            <a href="{% url 'beverage_entry_update' entry.pk %}" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Edit
+            </a>
+            <a href="{% url 'beverage_entry_delete' entry.pk %}" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Delete
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

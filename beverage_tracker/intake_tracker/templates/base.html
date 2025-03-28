@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beverage Tracker</title>
+    <style>
+        body {
+            padding-top: 0px; /* Adjust for fixed navbar */
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-rose-400 rounded-b-xl p-3">
+        <div class="container flex items-center justify-between">
+            <a class="flex items-center text-white font-semibold text-lg" href="{% url 'beverage_entry_list' %}">
+                <img class="w-20 h-20 sm:w-40 sm:h-40 md:w-30 md:h-30 mr-2" src="{% static 'images/logo.png' %}" alt="Beverage Tracker Logo">
+                Beverage Tracker
+            </a>
+            <div>
+                <ul class="flex space-x-4">
+                    <li>
+                        <a href="{% url 'beverage_entry_create' %}" class="text-white hover:text-gray-200">Add Entry</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'beverage_entry_filter' %}" class="text-white hover:text-gray-200">Filter Entries</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 ml-auto mr-auto sm:ml-auto sm:mr-auto">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto py-8">
+    <h1 class="text-2xl font-semibold mb-4 text-gray-800">Filter Beverage Entries</h1>
+
+    <form method="get" action="{% url 'beverage_entry_filter' %}" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="category">
+                Category:
+            </label>
+            <select name="category" id="category" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="">All</option>
+                {% for code, name in categories %}
+                    <option value="{{ code }}" {% if request.GET.category == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="md:flex md:items-center mb-4">
+            <div class="md:w-1/2 mb-2 md:mb-0 md:mr-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="start_date">
+                    Start Date:
+                </label>
+                <input type="date" name="start_date" id="start_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="{{ request.GET.start_date|default:'' }}">
+            </div>
+            <div class="md:w-1/2 md:ml-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="end_date">
+                    End Date:
+                </label>
+                <input type="date" name="end_date" id="end_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="{{ request.GET.end_date|default:'' }}">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="flex items-center">
+                <input class="form-check-input h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" type="checkbox" value="true" id="has_symptoms" name="has_symptoms" {% if request.GET.has_symptoms %}checked{% endif %}>
+                <label class="ml-2 block text-gray-700 text-sm font-bold" for="has_symptoms">
+                    Show Entries with Symptoms
+                </label>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Filter
+            </button>
+            <a href="{% url 'beverage_entry_list' %}" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Clear Filters
+            </a>
+        </div>
+    </form>
+
+    {% if entries %}
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-gray-800">Results:</h2>
+        <div class="overflow-x-auto rounded-lg shadow-md">
+            <table class="w-full text-left table-auto">
+                <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
+                    <tr>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Time</th>
+                        <th class="py-3 px-4">Category</th>
+                        <th class="py-3 px-4">Subcategory</th>
+                        <th class="py-3 px-4">Quantity</th>
+                        <th class="py-3 px-4">Unit</th>
+                        <th class="py-3 px-4">Has Symptoms</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for entry in entries %}
+                        <tr>
+                            <td class="py-3 px-4">{{ entry.date }}</td>
+                            <td class="py-3 px-4">{{ entry.time }}</td>
+                            <td class="py-3 px-4">{{ entry.get_category_display }}</td>
+                            <td class="py-3 px-4">{{ entry.subcategory|default:'-' }} {% if entry.custom_subcategory %}(Custom: {{ entry.custom_subcategory }}){% endif %}</td>
+                            <td class="py-3 px-4">{{ entry.quantity }}</td>
+                            <td class="py-3 px-4">{{ entry.get_unit_display }} {% if entry.custom_unit %}(Custom: {{ entry.custom_unit }}){% endif %}</td>
+                            <td class="py-3 px-4">{% if entry.has_symptoms %}Yes{% else %}No{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-700">No entries found matching your criteria.</p>
+    {% endif %}
+
+    <div class="mt-6">
+        <a href="{% url 'beverage_entry_list' %}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+            Back to List
+        </a>
+    </div>
+</div>
+{% endblock %}

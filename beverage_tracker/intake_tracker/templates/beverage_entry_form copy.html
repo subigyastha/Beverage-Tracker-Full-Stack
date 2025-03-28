@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center ">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+        <h1 class="text-2xl font-bold mb-6 text-center">{% if editing %}Edit{% else %}Create{% endif %} Beverage Entry</h1>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="space-y-4">
+                {% for field in beverage_form %}
+                    {% if field.name == 'temperature' %}
+                        <div class="space-y-2">
+                            <label for="temperature-slider" class="block text-gray-700 text-sm font-bold mb-2">Temperature</label>
+                            <input type="range" id="temperature-slider" name="temperature" min="0" max="6" value="{{ beverage_form.initial.temperature|default:3 }}" class="w-full">
+                            <div class="flex justify-between text-sm text-gray-500">
+                                <span>Ice Cold</span>
+                                <span>Cold</span>
+                                <span>Cool</span>
+                                <span>Warm</span>
+                                <span>Hot</span>
+                                <span>Very Hot</span>
+                                <span>Boiling Hot</span>
+                            </div>
+                             <p id="temperature-value" class="text-gray-700 text-sm"></p>
+                            {% if beverage_form.temperature.errors %}
+                                <p class="text-red-500 text-xs italic">{{ beverage_form.temperature.errors|striptags }}</p>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="space-y-2">
+                            <label for="{{ field.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-1">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <p class="text-red-500 text-xs italic">{{ field.errors|striptags }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+    
+            <div class="border-b border-gray-200 pb-4">
+                <h2 class="text-lg font-semibold mb-2">Additives</h2>
+                <div id="additives-formset">
+                    {{ additive_formset.management_form }}
+                    {% for form in additive_formset %}
+                    <div class="additive-form p-4 border rounded-md mb-2 relative">
+                        {{ form.as_p }}
+                        <!-- Hidden DELETE field required for Django formset -->
+                        <input type="hidden" name="{{ form.prefix }}-DELETE" class="delete-flag" value="">
+                        <button type="button" class="toggle-delete-btn absolute top-2 right-2 bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded text-sm">Delete</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" id="add-additive" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">Add Another Additive</button>
+            </div>
+
+            <div class="border-b border-gray-200 pb-4">
+                <h2 class="text-lg font-semibold mb-2">Symptoms</h2>
+                <div id="symptoms-formset">
+                    {{ symptom_formset.management_form }}
+                    {% for form in symptom_formset %}
+                    <div class="symptom-form p-4 border rounded-md mb-2 relative">
+                        {{ form.as_p }}
+                        <!-- Hidden DELETE field required for Django formset -->
+                        <input type="hidden" name="{{ form.prefix }}-DELETE" class="delete-flag" value="">
+                        <button type="button" class="toggle-delete-btn absolute top-2 right-2 bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded text-sm">Delete</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" id="add-symptom" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">Add Another Symptom</button>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">Save Entry</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Helper function to update form indices
+    function updateFormIndices(form, prefix, index) {
+        form.querySelectorAll('[name]').forEach(element => {
+            const name = element.getAttribute('name').replace(
+                new RegExp(`${prefix}-\\d+-`), 
+                `${prefix}-${index}-`
+            );
+            element.setAttribute('name', name);
+            
+            const id = element.getAttribute('id')?.replace(
+                new RegExp(`id_${prefix}-\\d+-`), 
+                `id_${prefix}-${index}-`
+            );
+            if (id) element.setAttribute('id', id);
+        });
+    }
+
+    // Helper function to clear form values
+    function clearFormValues(form) {
+        form.querySelectorAll('input:not(.delete-flag), select, textarea').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else {
+                input.value = '';
+            }
+        });
+    }
+
+    // Toggle delete/restore state
+    function toggleDeleteState(form) {
+        const deleteFlag = form.querySelector('.delete-flag');
+        const toggleBtn = form.querySelector('.toggle-delete-btn');
+        const isDeleted = deleteFlag.value === 'on';
+        
+        if (isDeleted) {
+            // Restore state
+            form.classList.remove('opacity-50', 'bg-gray-100');
+            deleteFlag.value = '';
+            toggleBtn.textContent = 'Delete';
+            toggleBtn.classList.remove('bg-green-500', 'hover:bg-green-700');
+            toggleBtn.classList.add('bg-red-500', 'hover:bg-red-700');
+            form.querySelectorAll('input:not(.delete-flag), select, textarea').forEach(input => {
+                input.disabled = false;
+            });
+        } else {
+            // Delete state
+            form.classList.add('opacity-50', 'bg-gray-100');
+            deleteFlag.value = 'on';
+            toggleBtn.textContent = 'Restore';
+            toggleBtn.classList.remove('bg-red-500', 'hover:bg-red-700');
+            toggleBtn.classList.add('bg-green-500', 'hover:bg-green-700');
+            form.querySelectorAll('input:not(.delete-flag), select, textarea').forEach(input => {
+                input.disabled = true;
+            });
+            clearFormValues(form);
+        }
+    }
+
+    // Add event listeners to existing toggle buttons
+    document.querySelectorAll('.toggle-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleDeleteState(btn.closest('.additive-form, .symptom-form')));
+    });
+
+    // Additive formset
+    document.getElementById('add-additive').addEventListener('click', function() {
+        const formset = document.getElementById('additives-formset');
+        const formCount = document.getElementById('id_additives-TOTAL_FORMS');
+        const totalForms = parseInt(formCount.value);
+        
+        const newForm = document.querySelector('.additive-form').cloneNode(true);
+        clearFormValues(newForm);
+        updateFormIndices(newForm, 'additives', totalForms);
+        
+        // Add event listener to new toggle button
+        const toggleBtn = newForm.querySelector('.toggle-delete-btn');
+        toggleBtn.addEventListener('click', () => toggleDeleteState(newForm));
+        
+        formset.appendChild(newForm);
+        formCount.value = totalForms + 1;
+    });
+
+    // Symptom formset
+    document.getElementById('add-symptom').addEventListener('click', function() {
+        const formset = document.getElementById('symptoms-formset');
+        const formCount = document.getElementById('id_symptoms-TOTAL_FORMS');
+        const totalForms = parseInt(formCount.value);
+        
+        const newForm = document.querySelector('.symptom-form').cloneNode(true);
+        clearFormValues(newForm);
+        updateFormIndices(newForm, 'symptoms', totalForms);
+        
+        // Add event listener to new toggle button
+        const toggleBtn = newForm.querySelector('.toggle-delete-btn');
+        toggleBtn.addEventListener('click', () => toggleDeleteState(newForm));
+        
+        formset.appendChild(newForm);
+        formCount.value = totalForms + 1;
+    });
+    // Temperature Slider
+    const tempSlider = document.getElementById('temperature-slider');
+    const tempValue = document.getElementById('temperature-value');
+    if (tempSlider) {
+        const tempLabels = [
+            "Ice Cold", "Cold", "Cool", "Warm", "Hot", "Very Hot", "Boiling Hot"
+        ];
+        const tempColors = [
+            "#003366", // Deep blue
+            "#0066cc", // Blue
+            "#6699ff", // Light blue
+            "#ffcc66", // Light orange
+            "#ff9933", // Orange
+            "#ff6600", // Dark Orange
+            "#cc0000"  // Dark Red
+        ];
+
+        // Initial value
+        tempValue.textContent = `Temperature: ${tempLabels[tempSlider.value]}`;
+        tempValue.style.color = tempColors[tempSlider.value];
+
+
+        tempSlider.addEventListener('input', function() {
+            const index = parseInt(this.value);
+            tempValue.textContent = `Temperature: ${tempLabels[index]}`;
+            tempValue.style.color = tempColors[index];
+
+            // Apply gradient (simplified, as direct gradient on range is limited)
+            const color1 = tempColors[Math.max(0, index - 1)];
+            const color2 = tempColors[index];
+            const percentage = (index / (tempSlider.max - tempSlider.min)) * 100;
+
+            this.style.backgroundImage = `linear-gradient(to right, ${color1} 0%, ${color1} ${percentage}%, ${color2} ${percentage}%, ${color2} 100%)`;
+        });
+    }
+
+
+    // Show/hide custom fields
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('additive-select')) {
+            const formDiv = e.target.closest('.additive-form');
+            const customField = formDiv.querySelector('.custom-additive');
+            if(customField){
+                customField.style.display = e.target.value === 'others' ? 'block' : 'none';
+            }
+        }
+        if (e.target.classList.contains('symptom-select')) {
+            const formDiv = e.target.closest('.symptom-form');
+            const customField = formDiv.querySelector('.custom-symptom');
+            if(customField){
+                customField.style.display = e.target.value === 'others' ? 'block' : 'none';
+            }
+        }
+    });
+    // Initial call to style the form elements.
+    initializeFormElements(document);
+    
+});
+</script>
+
+
+<style>
+    /* Custom arrow for select dropdown */
+    .custom-select-arrow {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z' fill='%239ca3af'/%3E%3C/svg%3E"); /* Tailwind gray-400 */
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 1em;
+      padding-right: 2rem; /* Make space for the arrow */
+    }
+    
+    .custom-select-arrow:focus {
+      outline: none;
+      border-color: #3b82f6; /* Tailwind blue-500 */
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* Tailwind blue-200 */
+    }
+    
+    
+    /* Hide the default browser arrow in IE */
+    select::-ms-expand {
+        display: none;
+    }
+    
+    /* Style for the temperature slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 5px;
+      background: #e5e7eb; /* gray-200 */
+      outline: none;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #6b7280; /* gray-500 */
+      cursor: pointer;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #6b7280; /* gray-500 */
+      cursor: pointer;
+    }
+    
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* blue-200 */
+      outline: none;
+    }
+    
+    input[type="range"]:focus::-moz-range-thumb {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* blue-200 */
+      outline: none;
+    }
+    </style>
+
+<script src="{% static 'js/dynamic_subcategories.js' %}"></script>
+{% endblock %}
+
+{% comment %} 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Additive formset
+        document.getElementById('add-additive').addEventListener('click', function() {
+            const formCount = document.getElementById('id_additives-TOTAL_FORMS');
+            const newForm = document.querySelector('.additive-form').cloneNode(true);
+            const formRegex = RegExp(`additives-(\\d){1}-`, 'g');
+
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, `additives-${formCount.value}-`);
+            document.getElementById('additives-formset').appendChild(newForm);
+            formCount.value = parseInt(formCount.value) + 1;
+        });
+
+        // Symptom formset
+        document.getElementById('add-symptom').addEventListener('click', function() {
+            const formCount = document.getElementById('id_symptoms-TOTAL_FORMS');
+            const newForm = document.querySelector('.symptom-form').cloneNode(true);
+            const formRegex = RegExp(`symptoms-(\\d){1}-`, 'g');
+
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, `symptoms-${formCount.value}-`);
+            document.getElementById('symptoms-formset').appendChild(newForm);
+            formCount.value = parseInt(formCount.value) + 1;
+        });
+
+        // Show/hide custom fields based on selection
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('additive-select')) {
+                const formDiv = e.target.closest('.additive-form');
+                const customField = formDiv.querySelector('.custom-additive');
+                if(customField){
+                    customField.style.display = e.target.value === 'others' ? 'block' : 'none';
+                }
+
+            }
+            if (e.target.classList.contains('symptom-select')) {
+                const formDiv = e.target.closest('.symptom-form');
+                const customField = formDiv.querySelector('.custom-symptom');
+                if(customField){
+                    customField.style.display = e.target.value === 'others' ? 'block' : 'none';
+                }
+            }
+        });
+    });
+</script> {% endcomment %}

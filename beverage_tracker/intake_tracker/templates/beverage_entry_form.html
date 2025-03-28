@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen py-6 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">
+                {% if editing %}Edit{% else %}Create{% endif %} Beverage Entry
+            </h1>
+
+            {% if messages %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                        <div class="p-4 rounded {% if message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Beverage Details -->
+                <div class="border-b border-gray-200 pb-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-700">Beverage Details</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for field in beverage_form %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ field.label }}
+                            </label>
+                            {% if field.name == 'subcategory' %}
+                                {{ field }}
+                                <!-- Pass initial subcategory to JS -->
+                                <script>
+                                    window.initialSubcategory = "{{ beverage_form.subcategory.value|default:''|escapejs }}";
+                                </script>
+                                {% elif field.name == 'temperature' %}
+                                    {{ field }} <!-- Hidden select field -->
+                                    <div class="space-y-2">
+                                        <label for="temperature-slider" class="block text-gray-700 text-sm font-bold mb-2">Temperature</label>
+                                        <input type="range" id="temperature-slider" min="0" max="6" value="{% if beverage_form.temperature.value %}{{ beverage_form.temperature.value|default:'3' }}{% else %}3{% endif %}" class="w-full">
+                                        <div class="flex justify-between text-sm text-gray-500">
+                                            <span>Ice Cold</span>
+                                            <span>Chilled</span>
+                                            <span>Cool</span>
+                                            <span>Room Temp</span>
+                                            <span>Warm</span>
+                                            <span>Hot</span>
+                                            <span>Boiling</span>
+                                        </div>
+                                        <p id="temperature-value" class="text-gray-700 text-sm"></p>
+                                        {% if beverage_form.temperature.errors %}
+                                            <p class="text-red-500 text-xs italic">{{ beverage_form.temperature.errors|striptags }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+                                {% if field.errors and field.name != 'temperature' %}
+                                    <p class="mt-1 text-sm text-red-600">{{ field.errors }}</p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                        {{ beverage_form.subcategory }}
+                        {% if beverage_form.subcategory.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ beverage_form.subcategory.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Additives -->
+                <div class="border-b border-gray-200 pb-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-700">Additives</h2>
+                    {{ additive_formset.management_form }}
+                    <div id="additive-forms">
+                        {% for form in additive_formset %}
+                            <div class="additive-form grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-2 border border-gray-200 rounded" data-id="{{ form.id.value|default:'' }}">
+                                {% for field in form.visible_fields %}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ field.label }}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.errors %}
+                                            <p class="mt-1 text-sm text-red-600">{{ field.errors }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                {% for hidden in form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div>
+                                    <button type="button" class="remove-additive mt-6 bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded">Remove</button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" id="add-additive" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Add Additive</button>
+                </div>
+                
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const additiveForms = document.getElementById('additive-forms');
+                    const addAdditiveBtn = document.getElementById('add-additive');
+                    const totalForms = document.querySelector('input[name="additives-TOTAL_FORMS"]');
+                
+                    // Remove additive
+                    additiveForms.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('remove-additive')) {
+                            const formDiv = e.target.closest('.additive-form');
+                            const deleteInput = formDiv.querySelector('input[name$="-DELETE"]');
+                            if (deleteInput) {
+                                // Existing form: mark for deletion
+                                deleteInput.checked = true;
+                                formDiv.style.display = 'none'; // Hide visually
+                            } else {
+                                // New form: remove entirely
+                                formDiv.remove();
+                                totalForms.value = parseInt(totalForms.value) - 1;
+                            }
+                        }
+                    });
+                
+                    // Add new additive form
+                    addAdditiveBtn.addEventListener('click', function() {
+                        const formCount = parseInt(totalForms.value);
+                        const newForm = additiveForms.children[0].cloneNode(true);
+                        newForm.querySelectorAll('input, select').forEach(input => {
+                            const name = input.name.replace(/additives-\d+-/, `additives-${formCount}-`);
+                            input.name = name;
+                            input.id = `id_${name}`;
+                            if (input.type !== 'hidden') input.value = '';
+                            if (input.name.endsWith('-DELETE')) input.checked = false;
+                        });
+                        newForm.style.display = 'block';
+                        additiveForms.appendChild(newForm);
+                        totalForms.value = formCount + 1;
+                    });
+                
+                    // Show existing forms
+                    additiveForms.querySelectorAll('.additive-form').forEach(form => {
+                        if (!form.querySelector('input[name$="-DELETE"]')) {
+                            form.querySelector('.remove-additive').addEventListener('click', () => form.remove());
+                        }
+                    });
+                });
+                </script>
+
+                <!-- Symptoms -->
+                <div class="border-b border-gray-200 pb-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-700">Symptoms</h2>
+                    {{ symptom_formset.management_form }}
+                    <div id="symptom-forms">
+                        {% for form in symptom_formset %}
+                            <div class="symptom-form grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4 p-2 border border-gray-200 rounded" data-id="{{ form.id.value|default:'' }}">
+                                {% for field in form.visible_fields %}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ field.label }}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.errors %}
+                                            <p class="mt-1 text-sm text-red-600">{{ field.errors }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                {% for hidden in form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div>
+                                    <button type="button" class="remove-symptom mt-6 bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded">Remove</button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" id="add-symptom" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Add Symptom</button>
+                </div>
+
+            
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-select-arrow {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z' fill='%239ca3af'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1em;
+        padding-right: 2rem;
+    }
+    .custom-select-arrow:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    select::-ms-expand {
+        display: none;
+    }
+    input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 5px;
+        background: #e5e7eb;
+        outline: none;
+        transition: opacity .2s;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #6b7280;
+        cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #6b7280;
+        cursor: pointer;
+    }
+    input[type="range"]:focus::-webkit-slider-thumb {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        outline: none;
+    }
+    input[type="range"]:focus::-moz-range-thumb {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        outline: none;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Helper functions
+
+    // Symptoms handling
+    const symptomForms = document.getElementById('symptom-forms');
+    const addSymptomBtn = document.getElementById('add-symptom');
+    const symptomTotalForms = document.querySelector('input[name="symptoms-TOTAL_FORMS"]');
+
+    symptomForms.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-symptom')) {
+            const formDiv = e.target.closest('.symptom-form');
+            const deleteInput = formDiv.querySelector('input[name$="-DELETE"]');
+            if (deleteInput) {
+                deleteInput.checked = true;
+                formDiv.style.display = 'none';
+            } else {
+                formDiv.remove();
+                symptomTotalForms.value = parseInt(symptomTotalForms.value) - 1;
+            }
+        }
+    });
+
+    addSymptomBtn.addEventListener('click', function() {
+        const formCount = parseInt(symptomTotalForms.value);
+        const newForm = symptomForms.children[0].cloneNode(true);
+        newForm.querySelectorAll('input, select').forEach(input => {
+            const name = input.name.replace(/symptoms-\d+-/, `symptoms-${formCount}-`);
+            input.name = name;
+            input.id = `id_${name}`;
+            if (input.type !== 'hidden') input.value = '';
+            if (input.name.endsWith('-DELETE')) input.checked = false;
+        });
+        newForm.style.display = 'block';
+        symptomForms.appendChild(newForm);
+        symptomTotalForms.value = formCount + 1;
+    });
+   
+
+    function updateFormIndices(form, prefix, index) {
+        form.querySelectorAll('[name]').forEach(element => {
+            const name = element.getAttribute('name').replace(
+                new RegExp(`${prefix}-\\d+-`), 
+                `${prefix}-${index}-`
+            );
+            element.setAttribute('name', name);
+            const id = element.getAttribute('id')?.replace(
+                new RegExp(`id_${prefix}-\\d+-`), 
+                `id_${prefix}-${index}-`
+            );
+            if (id) element.setAttribute('id', id);
+        });
+    }
+
+    function clearFormValues(form) {
+        form.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else {
+                input.value = '';
+            }
+        });
+    }
+
+    function toggleDeleteState(form) {
+        const deleteFlag = form.querySelector('[name$="-DELETE"]');
+        const toggleBtn = form.querySelector('.toggle-delete-btn');
+        const isDeleted = deleteFlag.value === 'on';
+        
+        if (isDeleted) {
+            form.classList.remove('opacity-50', 'bg-gray-200');
+            deleteFlag.value = '';
+            toggleBtn.textContent = 'Delete';
+            toggleBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            toggleBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+            form.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(input => {
+                input.disabled = false;
+            });
+        } else {
+            form.classList.add('opacity-50', 'bg-gray-200');
+            deleteFlag.value = 'on';
+            toggleBtn.textContent = 'Restore';
+            toggleBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            toggleBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            form.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(input => {
+                input.disabled = true;
+            });
+            clearFormValues(form);
+        }
+    }
+
+    document.querySelectorAll('.toggle-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleDeleteState(btn.closest('.additive-form, .symptom-form')));
+    });
+
+    document.getElementById('add-additive').addEventListener('click', function() {
+        const formset = document.getElementById('additives-formset');
+        const formCount = document.getElementById('id_additives-TOTAL_FORMS');
+        const totalForms = parseInt(formCount.value);
+        
+        const newForm = document.querySelector('.additive-form').cloneNode(true);
+        clearFormValues(newForm);
+        updateFormIndices(newForm, 'additives', totalForms);
+        
+        const toggleBtn = newForm.querySelector('.toggle-delete-btn');
+        toggleBtn.addEventListener('click', () => toggleDeleteState(newForm));
+        
+        formset.appendChild(newForm);
+        formCount.value = totalForms + 1;
+    });
+
+    document.getElementById('add-symptom').addEventListener('click', function() {
+        const formset = document.getElementById('symptoms-formset');
+        const formCount = document.getElementById('id_symptoms-TOTAL_FORMS');
+        const totalForms = parseInt(formCount.value);
+        
+        const newForm = document.querySelector('.symptom-form').cloneNode(true);
+        clearFormValues(newForm);
+        updateFormIndices(newForm, 'symptoms', totalForms);
+        
+        const toggleBtn = newForm.querySelector('.toggle-delete-btn');
+        toggleBtn.addEventListener('click', () => toggleDeleteState(newForm));
+        
+        formset.appendChild(newForm);
+        formCount.value = totalForms + 1;
+    });
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('additive-select')) {
+            const formDiv = e.target.closest('.additive-form');
+            const customField = formDiv.querySelector('[name$="-custom_additives"]');
+            if (customField) {
+                customField.style.display = e.target.value === 'others' ? 'block' : 'none';
+            }
+        }
+        if (e.target.classList.contains('symptom-select')) {
+            const formDiv = e.target.closest('.symptom-form');
+            const customField = formDiv.querySelector('[name$="-custom_symptoms"]');
+            if (customField) {
+                customField.style.display = e.target.value === 'others' ? 'block' : 'none';
+            }
+        }
+    });
+
+    // Temperature Slider
+    const tempSlider = document.getElementById('temperature-slider');
+    const tempValue = document.getElementById('temperature-value');
+    const tempSelect = document.querySelector('.temperature-slider');
+
+    if (tempSlider && tempValue && tempSelect) {
+        const tempChoices = [
+            'ice_cold', 'chilled', 'cool', 'room_temp', 'warm', 'hot', 'boiling'
+        ];
+        const tempLabels = [
+            "Ice Cold (0°C / 32°F)", "Chilled (4°C / 40°F)", "Cool (10°C / 50°F)", 
+            "Room Temperature (20°C / 68°F)", "Warm (50°C / 122°F)", "Hot (70°C / 158°F)", 
+            "Boiling (100°C / 212°F)"
+        ];
+        const tempColors = [
+            "#003366", "#0066cc", "#6699ff", "#ffcc66", "#ff9933", "#ff6600", "#cc0000"
+        ];
+
+        // Set initial value
+        const initialValue = tempSelect.value || 'room_temp';
+        const initialIndex = tempChoices.indexOf(initialValue);
+        tempSlider.value = initialIndex >= 0 ? initialIndex : 3; // Default to 'room_temp'
+        tempValue.textContent = `Temperature: ${tempLabels[tempSlider.value]}`;
+        tempValue.style.color = tempColors[tempSlider.value];
+
+        // Sync slider with hidden select
+        tempSlider.addEventListener('input', function() {
+            const index = parseInt(this.value);
+            tempSelect.value = tempChoices[index];
+            tempValue.textContent = `Temperature: ${tempLabels[index]}`;
+            tempValue.style.color = tempColors[index];
+
+            // Apply gradient
+            const color1 = tempColors[Math.max(0, index - 1)];
+            const color2 = tempColors[index];
+            const percentage = (index / (tempSlider.max - tempSlider.min)) * 100;
+            this.style.background = `linear-gradient(to right, ${color1} 0%, ${color1} ${percentage}%, ${color2} ${percentage}%, ${color2} 100%)`;
+        });
+
+        // Trigger initial update
+        tempSlider.dispatchEvent(new Event('input'));
+    } else {
+        console.error('Temperature slider elements not found');
+    }
+});
+</script>
+
+<script src="{% static 'js/dynamic_subcategories.js' %}"></script>
+{% endblock %}
