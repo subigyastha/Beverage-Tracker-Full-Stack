@@ -178,10 +178,12 @@ Add user authentication (django.contrib.auth).
 Implement entry listing or analytics views.
 3. Version Control:
 To use Git:
-
+```
 git init
 echo -e "venv/\n__pycache__/\n*.pyc\n*.pyo\n*.pyd\n*.db\n*.sqlite3\n*.log\n.env\nstaticfiles/" > .gitignore
 git add .
 git commit -m "Initial commit"
+
+```
 
 
